@@ -180,6 +180,7 @@ ICAPHandler.prototype = {
       case 'null-body':
         this.emitEvent(this.icapRequest.isReqMod() ? 'httpRequestNullBody' : 'httpResponseNullBody');
         this.logger.debug('[%s] null-body]', this.id);
+        this.icapRequest.push(null);
         this.icapResponse.end();
         this.resetState();
         this.nextState();
@@ -212,8 +213,10 @@ ICAPHandler.prototype = {
         throw new ICAPError('Cannot read chunk size' + line.str);
       }
       this.chunkSize = chunkSize;
-      if (arr.length > 1 && arr[1] === 'ieof') {
+      if (arr.length > 1 && arr[1] === ' ieof') {
+        // assert chunkSize === 0
         this.icapRequest.ieof = true;
+        this.bufferIndex += arr[1].length;
       }
       if (chunkSize === 0) {
         this.bufferIndex += 2; // skip last CRLF
@@ -351,6 +354,14 @@ ICAPHandler.prototype = {
         } else {
           this.emitEvent('httpResponse');
         }
+        if (this.icapRequest.ieof) {
+          // User can't initiate new data transfer by continuePreview();
+          // In absense of new data on wire nothing will trigger
+          // futher processing, therefore only we can initiate
+          // completion of the request processing:
+          this.nextState(); // the parsebody state installed above
+          return;
+        }
       }
     }
   },
@@ -364,6 +375,7 @@ ICAPHandler.prototype = {
     }
     if (this.icapRequest.ieof) {
       this.icapRequest.push(null);
+      this.icapResponse.end();
       this.resetState();
       this.nextState();
       return;

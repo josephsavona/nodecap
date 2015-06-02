@@ -119,12 +119,10 @@ _.extend(ICAPResponse.prototype, {
     }
   },
   continuePreview: function() {
-    if (!this.ieof) {
-      var code = this._getCode(100);
-      this.stream.write(code.join(' '));
-      this.stream.write(crlf);
-      this.stream.write(crlf);
-    }
+    var code = this._getCode(100);
+    this.stream.write(code.join(' '));
+    this.stream.write(crlf);
+    this.stream.write(crlf);
   },
   _write: function(data) {
     var tmp;
